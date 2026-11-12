@@ -12,33 +12,66 @@ import com.ejemplo.rpg.story.Engine
 import com.ejemplo.rpg.story.GameState
 import com.ejemplo.rpg.story.HistoriaPrueba
 
+@OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1. Cargamos la historia desde el archivo separado
         val historia = HistoriaPrueba.obtenerNodos()
         val motor = Engine(historia)
 
         setContent {
             MaterialTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    var estado by remember { mutableStateOf(GameState("inicio")) }
-                    val nodoActual = historia[estado.currentNodeId]!!
+                var estado by remember { mutableStateOf(GameState("inicio")) }
+                var modoEditor by remember { mutableStateOf(false) }
+                
+                val nodoActual = historia[estado.currentNodeId]!!
+                var textoEditado by remember { mutableStateOf(nodoActual.text) }
 
-                    Column(modifier = Modifier.padding(24.dp).fillMaxSize()) {
-                        Text(
-                            text = nodoActual.text,
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.weight(1f)
+                LaunchedEffect(estado.currentNodeId) {
+                    textoEditado = nodoActual.text
+                }
+
+                Scaffold(
+                    topBar = {
+                        TopAppBar(
+                            title = { Text(if (modoEditor) "Modo Editor" else "Modo Jugador") },
+                            actions = {
+                                Button(
+                                    onClick = { modoEditor = !modoEditor },
+                                    modifier = Modifier.padding(end = 8.dp)
+                                ) {
+                                    Text(if (modoEditor) "▶ Jugar" else "✏️ Editar")
+                                }
+                            }
                         )
+                    }
+                ) { padding ->
+                    Column(modifier = Modifier.padding(padding).padding(24.dp).fillMaxSize()) {
                         
-                        nodoActual.choices.forEach { eleccion ->
-                            Button(
-                                onClick = { estado = motor.makeChoice(estado, eleccion) },
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                            ) {
-                                Text(eleccion.text)
+                        if (modoEditor) {
+                            Text("Editando nodo: ${nodoActual.id}", style = MaterialTheme.typography.titleMedium)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = textoEditado,
+                                onValueChange = { textoEditado = it },
+                                modifier = Modifier.fillMaxWidth().weight(1f),
+                                label = { Text("Texto del nodo") }
+                            )
+                        } else {
+                            Text(
+                                text = textoEditado,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.weight(1f)
+                            )
+                            
+                            nodoActual.choices.forEach { eleccion ->
+                                Button(
+                                    onClick = { estado = motor.makeChoice(estado, eleccion) },
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                ) {
+                                    Text(eleccion.text)
+                                }
                             }
                         }
                     }
